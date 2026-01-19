@@ -97,10 +97,14 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     </button>
   );
 
-  const effectiveBorderWidth = selectedBubble ? selectedBubble.borderWidth : settings.activeBorderWidth;
+  // valeurs effectives (bulle sélectionnée > réglage global)
+  const effectiveFontSize = selectedBubble ? selectedBubble.fontSize : settings.activeFontSize;
   const effectiveTextColor = selectedBubble ? selectedBubble.textColor : settings.activeTextColor;
   const effectiveBorderColor = selectedBubble ? selectedBubble.borderColor : settings.activeBorderColor;
-  const effectiveFontSize = selectedBubble ? selectedBubble.fontSize : settings.activeFontSize;
+  const effectiveBorderWidth = selectedBubble ? selectedBubble.borderWidth : settings.activeBorderWidth;
+  const effectiveLineHeightOffset = selectedBubble
+    ? selectedBubble.lineHeightOffset
+    : settings.activeLineHeightOffset;
 
   return (
     <div className="mb-6 p-4 border border-gray-300 rounded-lg bg-white shadow-md space-y-6">
@@ -299,6 +303,40 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             </div>
           </div>
         )}
+
+        {/* Interligne */}
+        <div className="mb-4">
+          <h3 className="font-medium mb-1 text-sm text-gray-600">
+            Interligne : {effectiveLineHeightOffset}px
+          </h3>
+          <div className="flex items-center gap-3">
+            <input
+              type="range"
+              min={5}
+              max={40}
+              step={1}
+              value={effectiveLineHeightOffset}
+              onChange={(e) => {
+                const v = parseInt(e.target.value) || 5;
+                onSettingChange({ activeLineHeightOffset: v });
+              }}
+              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+              aria-label="Interligne"
+            />
+            <input
+              type="number"
+              min={5}
+              max={40}
+              step={1}
+              value={effectiveLineHeightOffset}
+              onChange={(e) => {
+                const v = parseInt(e.target.value) || 5;
+                onSettingChange({ activeLineHeightOffset: v });
+              }}
+              className="w-20 p-1 border border-gray-300 rounded text-sm"
+            />
+          </div>
+        </div>
 
         {/* Queue / points pensée (nouvelles bulles) */}
         {(settings.activeBubbleType === BubbleType.SpeechDown ||
