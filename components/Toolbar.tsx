@@ -312,12 +312,12 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           <div className="flex items-center gap-3">
             <input
               type="range"
-              min={5}
+              min={2}
               max={40}
               step={1}
               value={effectiveLineHeightOffset}
               onChange={(e) => {
-                const v = parseInt(e.target.value) || 5;
+                const v = parseInt(e.target.value) || 2;
                 onSettingChange({ activeLineHeightOffset: v });
               }}
               className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
@@ -325,12 +325,12 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             />
             <input
               type="number"
-              min={5}
+              min={2}
               max={40}
               step={1}
               value={effectiveLineHeightOffset}
               onChange={(e) => {
-                const v = parseInt(e.target.value) || 5;
+                const v = parseInt(e.target.value) || 2;
                 onSettingChange({ activeLineHeightOffset: v });
               }}
               className="w-20 p-1 border border-gray-300 rounded text-sm"
