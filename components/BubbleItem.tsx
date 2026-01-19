@@ -3,7 +3,6 @@ import { Bubble, BubblePart, MIN_BUBBLE_WIDTH, MIN_BUBBLE_HEIGHT, FONT_FAMILY_MA
 import { generateBubblePaths, getOverallBbox } from '../utils/bubbleUtils';
 import { detectTextOverflow, getTextBounds, SAFE_TEXT_ZONES, getLineHeightOffset } from '../utils/textAutoFit';
 
-
 interface BubbleItemProps {
   bubble: Bubble;
   isSelected: boolean;
@@ -23,20 +22,17 @@ const HANDLE_SIZE = 10;
 const HANDLE_OFFSET = HANDLE_SIZE / 2;
 const TAIL_TIP_HANDLE_RADIUS = 7;
 const TAIL_BASE_HANDLE_RADIUS = 9;
-const BUBBLE_BORDER_WIDTH = 2;
+// const BUBBLE_BORDER_WIDTH = 2; // ← remplacé par bubble.borderWidth
 const MIN_FONT_SIZE = 5;
 const MAX_FONT_SIZE = 40;
 
 type InteractionMode = 'move' | 'resize' | 'move-part' | 'move-tail-tip' | 'move-tail-base' | null;
 type ActiveHandle = 'tl' | 'tc' | 'tr' | 'ml' | 'mr' | 'bl' | 'bc' | 'br' | null;
 
-
-
 export const BubbleItem = forwardRef<BubbleItemHandle, BubbleItemProps>(({ bubble, isSelected, onSelect, onUpdate, onDelete, isSaving, canvasBounds }, ref) => {
   const [isEditingText, setIsEditingText] = useState(false);
   const [isInitialEdit, setIsInitialEdit] = useState(false);
   const textEditRef = useRef<HTMLDivElement>(null);
-
 
   const [interaction, setInteraction] = useState<{
     mode: InteractionMode; activeHandle: ActiveHandle; activePartId: string | null;
@@ -55,53 +51,27 @@ export const BubbleItem = forwardRef<BubbleItemHandle, BubbleItemProps>(({ bubbl
     const range = selection.getRangeAt(0);
     if (!textEditRef.current.contains(range.commonAncestorContainer)) return false;
 
-    // Helper to calculate new style
-    const getNewStyleValue = (currentVal: string, delta: number): string => {
-      const currentSize = parseInt(currentVal) || bubble.fontSize;
-      const newSize = Math.max(MIN_FONT_SIZE, Math.min(MAX_FONT_SIZE, currentSize + delta));
-      return `${newSize}px`;
-    }
-
-    // New approach: Wrap selection in span or update existing span
-    // Since complex range manipulation is error prone, let's try a simpler approach if possible.
-    // However, for precise selection styling, we need to handle the range.
-
-    // Simplification: use execCommand for fontSize but manage the unexpected '1' size better.
-    // The issue is likely that execCommand('fontSize', false, '7') maps to something huge, '1' maps to tiny.
-    // We cannot pass pixels to execCommand fontSize.
-    // So we MUST use the hack or write a custom wrapper.
-    // Let's refine the hack first as it is less code change than a full rich text engine.
-
-    // HACK IMPROVEMENT:
-    // 1. Calculate the target size BEFORE calling execCommand (we were doing this in the caller usually, but let's centralize).
-    // Actually the caller passes the exact value or the loop does.
-    // In handleWheel: `applyStyleToCurrentSelection('fontSize', newSize)` - so value IS the target size in pixels.
-
     if (style === 'fontSize') {
       const sizePx = `${value}px`;
-      // Use a unique marker
-      const marker = '7'; // largest size, unlikely to be used by accident? or 1.
+      const marker = '7';
       document.execCommand('fontSize', false, marker);
 
       const fontElements = textEditRef.current.getElementsByTagName('font');
       let replaced = false;
-      // Convert live list to array to avoid issues during modification
+
       Array.from(fontElements).forEach((element: Element) => {
-        // Cast to any because font tag properties are not in standard types
         const fontEl = element as any;
         if (fontEl.getAttribute('size') === marker) {
           const span = document.createElement('span');
           span.style.fontSize = sizePx;
           span.innerHTML = fontEl.innerHTML;
 
-          // Preserve other styles? font tag is deprecated so it only has color/face/size
           if (fontEl.face) span.style.fontFamily = fontEl.face;
           if (fontEl.color) span.style.color = fontEl.color;
 
           fontEl.parentNode?.replaceChild(span, fontEl);
           replaced = true;
 
-          // Restore selection to the new span content so resizing continues smoothly
           const newRange = document.createRange();
           newRange.selectNodeContents(span);
           const selection = window.getSelection();
@@ -111,18 +81,10 @@ export const BubbleItem = forwardRef<BubbleItemHandle, BubbleItemProps>(({ bubbl
           }
         }
       });
-
-      // If we failed to find the font tag but execCommand returned true, we might be in trouble.
-      // But usually it works. The issue might be that `value` passed was wrong?
     } else {
       const styleValue = FONT_FAMILY_MAP[value as FontName];
       document.execCommand('fontName', false, styleValue);
     }
-
-    // Clean up empty spans or merge? (Optional optimization)
-
-    // DO NOT call onUpdate here. It triggers re-render which breaks selection in some browsers/react versions.
-    // relying on onBlur to sync the text back to state.
 
     return true;
   }, [isEditingText, bubble]);
@@ -160,8 +122,6 @@ export const BubbleItem = forwardRef<BubbleItemHandle, BubbleItemProps>(({ bubbl
     }
   }, [isSelected, isEditingText, isInitialEdit, bubble.text]);
 
-
-
   useEffect(() => {
     const textDiv = textEditRef.current;
     if (isSelected && isEditingText && textDiv) {
@@ -172,14 +132,12 @@ export const BubbleItem = forwardRef<BubbleItemHandle, BubbleItemProps>(({ bubbl
         const selection = window.getSelection();
         if (!selection || !textDiv.contains(selection.anchorNode)) return;
 
-        // If no selection (collapsed), resize entire bubble font - this DOES need onUpdate
         if (selection.isCollapsed || selection.rangeCount === 0) {
           const newSize = Math.max(MIN_FONT_SIZE, Math.min(MAX_FONT_SIZE, bubble.fontSize + delta));
           if (newSize !== bubble.fontSize) onUpdate({ ...bubble, fontSize: newSize });
           return;
         }
 
-        // If selection exists, just modify the DOM (no onUpdate)
         let container = selection.getRangeAt(0).startContainer;
         if (container.nodeType === Node.TEXT_NODE) container = container.parentNode!;
         const currentSize = parseInt(window.getComputedStyle(container as Element).fontSize, 10) || bubble.fontSize;
@@ -192,11 +150,9 @@ export const BubbleItem = forwardRef<BubbleItemHandle, BubbleItemProps>(({ bubbl
     }
   }, [isSelected, isEditingText, bubble, onUpdate, applyStyleToCurrentSelection]);
 
-  // Handle wheel for shape variation when NOT editing text
   useEffect(() => {
     if (isSelected && !isEditingText) {
       const handleShapeWheel = (e: WheelEvent) => {
-        // Only for bubbles that support shape variation (Thought, Shout)
         if (bubble.type !== BubbleType.Thought && bubble.type !== BubbleType.Shout) return;
 
         e.preventDefault();
@@ -206,15 +162,9 @@ export const BubbleItem = forwardRef<BubbleItemHandle, BubbleItemProps>(({ bubbl
         const currentVariant = bubble.shapeVariant || 0;
         onUpdate({ ...bubble, shapeVariant: currentVariant + delta });
       };
-
-      // Attach to the bubble element itself if possible, or document if selected
-      // Using a ref for the main container would be better, but we can attach to the component root via a ref or just document with check
-      // Since we don't have a direct ref to the root div exposed easily here (we forwardRef to handle), let's use a local ref for the div
-      // Actually we can just use the existing logic structure or add a ref to the div.
-      // Let's add a ref to the main div.
+      // TODO: raccrocher ce handler sur un ref si besoin
     }
   }, [isSelected, isEditingText, bubble, onUpdate]);
-
 
   useEffect(() => {
     const textDiv = textEditRef.current;
@@ -260,8 +210,6 @@ export const BubbleItem = forwardRef<BubbleItemHandle, BubbleItemProps>(({ bubbl
     }
   }, [isSelected, isEditingText, bubble, onUpdate, applyStyleToCurrentSelection]);
 
-
-
   const handleTextBlur = () => {
     setIsEditingText(false);
     const currentHTML = textEditRef.current?.innerHTML ?? '';
@@ -297,7 +245,6 @@ export const BubbleItem = forwardRef<BubbleItemHandle, BubbleItemProps>(({ bubbl
         interactionData.initialBaseCY = part.baseCY;
       }
     } else if (mode === 'resize') {
-      // keep a copy of original parts so resizing calculations use stable originals
       interactionData.initialParts = bubble.parts.map(p => ({ ...p }));
     }
 
@@ -369,7 +316,7 @@ export const BubbleItem = forwardRef<BubbleItemHandle, BubbleItemProps>(({ bubbl
           newBubble.height = newHeight;
           newBubble.x = newX;
           newBubble.y = newY;
-          // Adjust parts so tails remain attached to edges (top/bottom/left/right)
+
           try {
             const scaleX = newWidth / interaction.initialBubbleWidth;
             const scaleY = newHeight / interaction.initialBubbleHeight;
@@ -388,7 +335,6 @@ export const BubbleItem = forwardRef<BubbleItemHandle, BubbleItemProps>(({ bubbl
                 const anchoredRight = Math.abs(partOrig.baseCX - origW) < eps;
                 const anchoredLeft = Math.abs(partOrig.baseCX) < eps;
 
-                // Update base position: keep anchored edges exact, otherwise scale proportionally
                 if (anchoredRight) part.baseCX = newWidth;
                 else if (anchoredLeft) part.baseCX = 0;
                 else part.baseCX = Math.max(0, Math.min(newWidth, partOrig.baseCX * scaleX));
@@ -397,13 +343,11 @@ export const BubbleItem = forwardRef<BubbleItemHandle, BubbleItemProps>(({ bubbl
                 else if (anchoredTop) part.baseCY = 0;
                 else part.baseCY = Math.max(0, Math.min(newHeight, partOrig.baseCY * scaleY));
 
-                // Preserve tip relative vector to base (scale it)
                 const dx = partOrig.tipX - partOrig.baseCX;
                 const dy = partOrig.tipY - partOrig.baseCY;
                 part.tipX = part.baseCX + dx * scaleX;
                 part.tipY = part.baseCY + dy * scaleY;
 
-                // Scale baseWidth and initial widths
                 if (typeof part.baseWidth === 'number') {
                   part.baseWidth = Math.max(1, part.baseWidth * scaleX);
                 }
@@ -425,9 +369,7 @@ export const BubbleItem = forwardRef<BubbleItemHandle, BubbleItemProps>(({ bubbl
 
               return p;
             });
-          } catch (e) {
-            // If anything fails, don't break resize — keep parts unchanged
-          }
+          } catch (e) {}
 
           break;
         }
@@ -476,15 +418,12 @@ export const BubbleItem = forwardRef<BubbleItemHandle, BubbleItemProps>(({ bubbl
             const anchoredLeft = Math.abs(initBaseCX) < eps;
 
             if (anchoredBottom || anchoredTop) {
-              // move along top/bottom edge: update baseCX from mouse X, keep baseCY fixed
               part.baseCX = Math.max(0, Math.min(w, localMouseX));
               part.baseCY = anchoredBottom ? h : 0;
             } else if (anchoredLeft || anchoredRight) {
-              // move along left/right edge: update baseCY from mouse Y, keep baseCX fixed
               part.baseCY = Math.max(0, Math.min(h, localMouseY));
               part.baseCX = anchoredRight ? w : 0;
             } else {
-              // fallback to previous heuristic if base was not exactly on an edge
               if (Math.abs(dx / w) > Math.abs(dy / h)) {
                 part.baseCX = dx > 0 ? w : 0;
                 part.baseCY = h / 2 + dy * (w / (2 * Math.abs(dx || 1)));
@@ -494,7 +433,6 @@ export const BubbleItem = forwardRef<BubbleItemHandle, BubbleItemProps>(({ bubbl
               }
             }
 
-            // preserve tip vector relative to base
             const relDX = (interaction.initialTipX! - initBaseCX);
             const relDY = (interaction.initialTipY! - initBaseCY);
             part.tipX = part.baseCX + relDX;
@@ -530,10 +468,7 @@ export const BubbleItem = forwardRef<BubbleItemHandle, BubbleItemProps>(({ bubbl
   const { bodyPath, partsCircles } = useMemo(() => generateBubblePaths(bubble), [bubble]);
   const bbox = useMemo(() => getOverallBbox(bubble), [bubble]);
 
-  // Calculer les paddings dynamiques en fonction du type de bulle
   const safeZone = SAFE_TEXT_ZONES[bubble.type] || { widthFactor: 0.80, heightFactor: 0.75 };
-  const paddingH = ((1 - safeZone.widthFactor) / 2) * 100;
-  const paddingV = ((1 - safeZone.heightFactor) / 2) * 100;
 
   const bubbleStyle: React.CSSProperties = {
     position: 'absolute',
@@ -544,7 +479,6 @@ export const BubbleItem = forwardRef<BubbleItemHandle, BubbleItemProps>(({ bubbl
     zIndex: bubble.zIndex,
     fontFamily: FONT_FAMILY_MAP[bubble.fontFamily],
     fontSize: `${bubble.fontSize}px`,
-
     color: bubble.textColor,
     border: isSelected ? '2px solid #3b82f6' : '2px solid transparent',
     boxSizing: 'content-box',
@@ -578,7 +512,6 @@ export const BubbleItem = forwardRef<BubbleItemHandle, BubbleItemProps>(({ bubbl
     height: `${bbox.height}px`,
   };
 
-
   const textEditStyle: React.CSSProperties = {
     outline: 'none',
     cursor: isEditingText ? 'text' : 'move',
@@ -589,7 +522,7 @@ export const BubbleItem = forwardRef<BubbleItemHandle, BubbleItemProps>(({ bubbl
   };
 
   const hasBorder = ![BubbleType.TextOnly].includes(bubble.type);
-  const strokeWidth = hasBorder ? BUBBLE_BORDER_WIDTH : 0;
+  const strokeWidth = hasBorder ? (bubble.borderWidth ?? 2) : 0;   // ← ici on utilise borderWidth
   const strokeDasharray = bubble.type === BubbleType.Whisper ? '5,5' : 'none';
 
   const renderResizeHandles = () => {
@@ -727,8 +660,6 @@ export const BubbleItem = forwardRef<BubbleItemHandle, BubbleItemProps>(({ bubbl
       }}
       onDoubleClick={handleBubbleBodyDoubleClick}
     >
-
-
       <svg style={svgStyle}>
         {bodyPath && (
           <path
