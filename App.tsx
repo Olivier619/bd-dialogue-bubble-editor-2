@@ -459,8 +459,8 @@ const App: React.FC = () => {
     reader.readAsText(file);
   }, []);
 
-  471
-    
+    return (
+      
     <div className="flex flex-col h-screen bg-gray-200">
       <header className="bg-white shadow-md z-10 flex-shrink-0">
         <h1 className="text-2xl sm:text-3xl font-bold py-3 text-center text-gray-800 font-Bangers tracking-wide">
@@ -521,5 +521,6 @@ const App: React.FC = () => {
 };
 
 export default App;
+
 
 
