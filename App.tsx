@@ -1,7 +1,22 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Toolbar } from './components/Toolbar.tsx';
 import { CanvasArea } from './components/CanvasArea.tsx';
-import { Bubble, BubblePart, BubbleType, FontName, ToolSettings, MIN_BUBBLE_WIDTH, MIN_BUBBLE_HEIGHT, MIN_TAIL_LENGTH, MIN_TAIL_BASE_WIDTH, MIN_DOT_COUNT, MIN_DOT_SIZE, BUBBLE_REQUIRES_PARTS, SpeechTailPart, ThoughtDotPart } from './types.ts';
+import {
+  Bubble,
+  BubblePart,
+  BubbleType,
+  FontName,
+  ToolSettings,
+  MIN_BUBBLE_WIDTH,
+  MIN_BUBBLE_HEIGHT,
+  MIN_TAIL_LENGTH,
+  MIN_TAIL_BASE_WIDTH,
+  MIN_DOT_COUNT,
+  MIN_DOT_SIZE,
+  BUBBLE_REQUIRES_PARTS,
+  SpeechTailPart,
+  ThoughtDotPart
+} from './types.ts';
 import { BubbleItemHandle } from './components/BubbleItem.tsx';
 import { generateBubblePaths } from './utils/bubbleUtils';
 import { getTextBounds } from './utils/textAutoFit';
@@ -16,7 +31,8 @@ const App: React.FC = () => {
     activeFontSize: 12,
     activeTextColor: '#000000',
     activeBorderColor: '#000000',
-    activeBorderWidth: 2,             // ← épaisseur par défaut
+    activeBorderWidth: 2,
+    activeLineHeightOffset: 10, // interligne par défaut
     defaultTailLength: 30,
     defaultTailBaseWidth: 20,
     defaultDotCount: 4,
@@ -59,7 +75,8 @@ const App: React.FC = () => {
           activeFontSize: selectedBubble.fontSize,
           activeTextColor: selectedBubble.textColor,
           activeBorderColor: selectedBubble.borderColor,
-          activeBorderWidth: selectedBubble.borderWidth,   // ← synchro avec bulle sélectionnée
+          activeBorderWidth: selectedBubble.borderWidth,
+          activeLineHeightOffset: selectedBubble.lineHeightOffset,
         }));
       }
     }
@@ -149,7 +166,8 @@ const App: React.FC = () => {
       fontSize: toolSettings.activeFontSize,
       textColor: toolSettings.activeTextColor,
       borderColor: toolSettings.activeBorderColor,
-      borderWidth: toolSettings.activeBorderWidth,  // ← épaisseur appliquée
+      borderWidth: toolSettings.activeBorderWidth,
+      lineHeightOffset: toolSettings.activeLineHeightOffset,
       zIndex: nextZIndex.current++,
       parts: newParts,
     };
@@ -178,6 +196,7 @@ const App: React.FC = () => {
         activeTextColor: updatedBubble.textColor,
         activeBorderColor: updatedBubble.borderColor,
         activeBorderWidth: updatedBubble.borderWidth,
+        activeLineHeightOffset: updatedBubble.lineHeightOffset,
       }));
     }
   }, [selectedBubbleId]);
@@ -211,6 +230,9 @@ const App: React.FC = () => {
         if (typeof newSettings.activeBorderWidth === 'number') {
           updates.borderWidth = newSettings.activeBorderWidth;
         }
+        if (typeof newSettings.activeLineHeightOffset === 'number') {
+          updates.lineHeightOffset = newSettings.activeLineHeightOffset;
+        }
 
         if (Object.keys(updates).length > 0) {
           setBubbles(prev => prev.map(b => b.id === selectedBubbleId ? { ...b, ...updates } : b));
@@ -229,7 +251,7 @@ const App: React.FC = () => {
   const canvasAreaRef = useRef<HTMLDivElement>(null);
 
   const drawBubbleToCanvas = useCallback(async (ctx: CanvasRenderingContext2D, bubble: Bubble, text: string) => {
-    const { x, y, width, height, type, borderColor, textColor, fontSize, parts, borderWidth } = bubble;
+    const { x, y, width, height, type, borderColor, textColor, borderWidth } = bubble;
 
     ctx.save();
     ctx.translate(x, y);
@@ -288,8 +310,9 @@ const App: React.FC = () => {
           isBold: false,
           isItalic: false,
           isUnderline: false,
-          isStrikethrough: false
-        },
+          isStrikethrough: false,
+          lineHeightOffset: bubble.lineHeightOffset, // à utiliser dans ton renderer si besoin
+        } as any,
         fontMap
       );
     } catch (e) {
@@ -312,7 +335,7 @@ const App: React.FC = () => {
     await new Promise(resolve => setTimeout(resolve, 300));
 
     try {
-      await document.fonts.ready;
+      await (document as any).fonts.ready;
 
       const canvasElement = canvasAreaRef.current.querySelector('#actual-canvas-content') as HTMLElement;
       if (!canvasElement) {
@@ -343,7 +366,6 @@ const App: React.FC = () => {
         const bubbleElement = document.querySelector(`[data-bubble-id="${bubble.id}"]`);
         const textElement = bubbleElement?.querySelector('.bubble-text') as HTMLDivElement | null;
         const currentText = textElement ? textElement.innerHTML : bubble.text;
-
         await drawBubbleToCanvas(ctx, bubble, currentText);
       }
 
@@ -385,7 +407,7 @@ const App: React.FC = () => {
       toolSettings: toolSettings,
       nextZIndex: nextZIndex.current,
       canvasSize: canvasSize,
-      version: "1.2"   // version bump
+      version: "1.3"
     };
 
     const jsonString = JSON.stringify(projectState, null, 2);
@@ -413,13 +435,23 @@ const App: React.FC = () => {
           throw new Error("Fichier de projet invalide ou corrompu.");
         }
 
-        const defaultBubbleProps = { textColor: '#000000', borderColor: '#000000', borderWidth: 2 };
+        const defaultBubbleProps = {
+          textColor: '#000000',
+          borderColor: '#000000',
+          borderWidth: 2,
+          lineHeightOffset: 10
+        };
 
         setUploadedImage(projectState.image);
         setBubbles(projectState.bubbles.map((b: Bubble) => ({ ...defaultBubbleProps, ...b })));
         setToolSettings(prev => ({ ...prev, ...projectState.toolSettings }));
         nextZIndex.current = projectState.nextZIndex;
-        setCanvasSize(projectState.canvasSize || { width: projectState.image.width / 2, height: projectState.image.height / 2 });
+        setCanvasSize(
+          projectState.canvasSize || {
+            width: projectState.image.width / 2,
+            height: projectState.image.height / 2
+          }
+        );
         setSelectedBubbleId(null);
 
         alert("Projet chargé avec succès !");
