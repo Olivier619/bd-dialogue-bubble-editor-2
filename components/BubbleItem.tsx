@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo, forwardRef, useImperativeHandle } from 'react';
 import { Bubble, BubblePart, MIN_BUBBLE_WIDTH, MIN_BUBBLE_HEIGHT, FONT_FAMILY_MAP, BubbleType, FontName, SpeechTailPart, ThoughtDotPart } from '../types.ts';
 import { generateBubblePaths, getOverallBbox } from '../utils/bubbleUtils';
-import { detectTextOverflow, getTextBounds, SAFE_TEXT_ZONES, getLineHeightOffset } from '../utils/textAutoFit';
+import { SAFE_TEXT_ZONES, getLineHeightOffset } from '../utils/textAutoFit';
 
 interface BubbleItemProps {
   bubble: Bubble;
@@ -22,7 +22,7 @@ const HANDLE_SIZE = 10;
 const HANDLE_OFFSET = HANDLE_SIZE / 2;
 const TAIL_TIP_HANDLE_RADIUS = 7;
 const TAIL_BASE_HANDLE_RADIUS = 9;
-// const BUBBLE_BORDER_WIDTH = 2; // ← remplacé par bubble.borderWidth
+// const BUBBLE_BORDER_WIDTH = 2;
 const MIN_FONT_SIZE = 5;
 const MAX_FONT_SIZE = 40;
 
@@ -57,20 +57,16 @@ export const BubbleItem = forwardRef<BubbleItemHandle, BubbleItemProps>(({ bubbl
       document.execCommand('fontSize', false, marker);
 
       const fontElements = textEditRef.current.getElementsByTagName('font');
-      let replaced = false;
-
       Array.from(fontElements).forEach((element: Element) => {
         const fontEl = element as any;
         if (fontEl.getAttribute('size') === marker) {
           const span = document.createElement('span');
           span.style.fontSize = sizePx;
           span.innerHTML = fontEl.innerHTML;
-
           if (fontEl.face) span.style.fontFamily = fontEl.face;
           if (fontEl.color) span.style.color = fontEl.color;
 
           fontEl.parentNode?.replaceChild(span, fontEl);
-          replaced = true;
 
           const newRange = document.createRange();
           newRange.selectNodeContents(span);
@@ -162,7 +158,7 @@ export const BubbleItem = forwardRef<BubbleItemHandle, BubbleItemProps>(({ bubbl
         const currentVariant = bubble.shapeVariant || 0;
         onUpdate({ ...bubble, shapeVariant: currentVariant + delta });
       };
-      // TODO: raccrocher ce handler sur un ref si besoin
+      // possibilité de raccrocher ce handler sur un ref si besoin
     }
   }, [isSelected, isEditingText, bubble, onUpdate]);
 
@@ -465,7 +461,7 @@ export const BubbleItem = forwardRef<BubbleItemHandle, BubbleItemProps>(({ bubbl
     };
   }, [interaction, onUpdate, bubble]);
 
-  const { bodyPath, partsCircles } = useMemo(() => generateBubblePaths(bubble), [bubble]);
+  const { bodyPath } = useMemo(() => generateBubblePaths(bubble), [bubble]);
   const bbox = useMemo(() => getOverallBbox(bubble), [bubble]);
 
   const safeZone = SAFE_TEXT_ZONES[bubble.type] || { widthFactor: 0.80, heightFactor: 0.75 };
@@ -522,8 +518,18 @@ export const BubbleItem = forwardRef<BubbleItemHandle, BubbleItemProps>(({ bubbl
   };
 
   const hasBorder = ![BubbleType.TextOnly].includes(bubble.type);
-  const strokeWidth = hasBorder ? (bubble.borderWidth ?? 2) : 0;   // ← ici on utilise borderWidth
+  const strokeWidth = hasBorder ? (bubble.borderWidth ?? 2) : 0;
   const strokeDasharray = bubble.type === BubbleType.Whisper ? '5,5' : 'none';
+
+  const getCursorForHandle = (handle: ActiveHandle): string => {
+    switch (handle) {
+      case 'tl': case 'br': return 'nwse-resize';
+      case 'tr': case 'bl': return 'nesw-resize';
+      case 'tc': case 'bc': return 'ns-resize';
+      case 'ml': case 'mr': return 'ew-resize';
+      default: return 'default';
+    }
+  };
 
   const renderResizeHandles = () => {
     if (!isSelected || isEditingText) return null;
@@ -559,16 +565,6 @@ export const BubbleItem = forwardRef<BubbleItemHandle, BubbleItemProps>(({ bubbl
         }}
       />
     ));
-  };
-
-  const getCursorForHandle = (handle: ActiveHandle): string => {
-    switch (handle) {
-      case 'tl': case 'br': return 'nwse-resize';
-      case 'tr': case 'bl': return 'nesw-resize';
-      case 'tc': case 'bc': return 'ns-resize';
-      case 'ml': case 'mr': return 'ew-resize';
-      default: return 'default';
-    }
   };
 
   const renderParts = () => {
