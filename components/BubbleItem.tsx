@@ -1,7 +1,24 @@
-import React, { useState, useRef, useEffect, useCallback, useMemo, forwardRef, useImperativeHandle } from 'react';
-import { Bubble, BubblePart, MIN_BUBBLE_WIDTH, MIN_BUBBLE_HEIGHT, FONT_FAMILY_MAP, BubbleType, FontName, SpeechTailPart, ThoughtDotPart } from '../types.ts';
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  useMemo,
+  forwardRef,
+  useImperativeHandle
+} from 'react';
+import {
+  Bubble,
+  MIN_BUBBLE_WIDTH,
+  MIN_BUBBLE_HEIGHT,
+  FONT_FAMILY_MAP,
+  BubbleType,
+  FontName,
+  SpeechTailPart,
+  ThoughtDotPart
+} from '../types.ts';
 import { generateBubblePaths, getOverallBbox } from '../utils/bubbleUtils';
-import { SAFE_TEXT_ZONES, getLineHeightOffset } from '../utils/textAutoFit';
+import { SAFE_TEXT_ZONES } from '../utils/textAutoFit';
 
 interface BubbleItemProps {
   bubble: Bubble;
@@ -22,14 +39,16 @@ const HANDLE_SIZE = 10;
 const HANDLE_OFFSET = HANDLE_SIZE / 2;
 const TAIL_TIP_HANDLE_RADIUS = 7;
 const TAIL_BASE_HANDLE_RADIUS = 9;
-// const BUBBLE_BORDER_WIDTH = 2;
 const MIN_FONT_SIZE = 5;
 const MAX_FONT_SIZE = 40;
 
 type InteractionMode = 'move' | 'resize' | 'move-part' | 'move-tail-tip' | 'move-tail-base' | null;
 type ActiveHandle = 'tl' | 'tc' | 'tr' | 'ml' | 'mr' | 'bl' | 'bc' | 'br' | null;
 
-export const BubbleItem = forwardRef<BubbleItemHandle, BubbleItemProps>(({ bubble, isSelected, onSelect, onUpdate, onDelete, isSaving, canvasBounds }, ref) => {
+export const BubbleItem = forwardRef<BubbleItemHandle, BubbleItemProps>((
+  { bubble, isSelected, onSelect, onUpdate, onDelete, isSaving, canvasBounds },
+  ref
+) => {
   const [isEditingText, setIsEditingText] = useState(false);
   const [isInitialEdit, setIsInitialEdit] = useState(false);
   const textEditRef = useRef<HTMLDivElement>(null);
@@ -42,7 +61,10 @@ export const BubbleItem = forwardRef<BubbleItemHandle, BubbleItemProps>(({ bubbl
     initialBaseCX?: number; initialBaseCY?: number;
   } | null>(null);
 
-  const applyStyleToCurrentSelection = useCallback((style: 'fontFamily' | 'fontSize', value: number | FontName): boolean => {
+  const applyStyleToCurrentSelection = useCallback((
+    style: 'fontFamily' | 'fontSize',
+    value: number | FontName
+  ): boolean => {
     if (!isEditingText || !textEditRef.current) return false;
 
     const selection = window.getSelection();
@@ -70,10 +92,10 @@ export const BubbleItem = forwardRef<BubbleItemHandle, BubbleItemProps>(({ bubbl
 
           const newRange = document.createRange();
           newRange.selectNodeContents(span);
-          const selection = window.getSelection();
-          if (selection) {
-            selection.removeAllRanges();
-            selection.addRange(newRange);
+          const sel = window.getSelection();
+          if (sel) {
+            sel.removeAllRanges();
+            sel.addRange(newRange);
           }
         }
       });
@@ -83,7 +105,7 @@ export const BubbleItem = forwardRef<BubbleItemHandle, BubbleItemProps>(({ bubbl
     }
 
     return true;
-  }, [isEditingText, bubble]);
+  }, [isEditingText]);
 
   const enterEditMode = useCallback(() => {
     if (!isEditingText && isSelected) {
@@ -99,7 +121,9 @@ export const BubbleItem = forwardRef<BubbleItemHandle, BubbleItemProps>(({ bubbl
 
   useEffect(() => {
     const textDiv = textEditRef.current;
-    if (textDiv && !isEditingText && textDiv.innerHTML !== bubble.text) textDiv.innerHTML = bubble.text;
+    if (textDiv && !isEditingText && textDiv.innerHTML !== bubble.text) {
+      textDiv.innerHTML = bubble.text;
+    }
   }, [isEditingText, bubble.text]);
 
   useEffect(() => {
@@ -158,7 +182,7 @@ export const BubbleItem = forwardRef<BubbleItemHandle, BubbleItemProps>(({ bubbl
         const currentVariant = bubble.shapeVariant || 0;
         onUpdate({ ...bubble, shapeVariant: currentVariant + delta });
       };
-      // possibilité de raccrocher ce handler sur un ref si besoin
+      // À connecter sur un ref si besoin
     }
   }, [isSelected, isEditingText, bubble, onUpdate]);
 
@@ -209,10 +233,20 @@ export const BubbleItem = forwardRef<BubbleItemHandle, BubbleItemProps>(({ bubbl
   const handleTextBlur = () => {
     setIsEditingText(false);
     const currentHTML = textEditRef.current?.innerHTML ?? '';
-    if (currentHTML !== bubble.text) onUpdate({ ...bubble, text: currentHTML.trim() === '' || currentHTML === '<br>' ? 'Votre texte ici' : currentHTML });
+    if (currentHTML !== bubble.text) {
+      onUpdate({
+        ...bubble,
+        text: currentHTML.trim() === '' || currentHTML === '<br>' ? 'Votre texte ici' : currentHTML
+      });
+    }
   };
 
-  const handleBubbleMouseDown = useCallback((e: React.MouseEvent | React.TouchEvent, mode: InteractionMode, handle?: ActiveHandle, partId?: string) => {
+  const handleBubbleMouseDown = useCallback((
+    e: React.MouseEvent | React.TouchEvent,
+    mode: InteractionMode,
+    handle?: ActiveHandle,
+    partId?: string
+  ) => {
     if (isSaving) return;
 
     e.preventDefault();
@@ -223,8 +257,8 @@ export const BubbleItem = forwardRef<BubbleItemHandle, BubbleItemProps>(({ bubbl
     }
 
     const isTouchEvent = 'touches' in e;
-    const clientX = isTouchEvent ? e.touches[0].clientX : e.clientX;
-    const clientY = isTouchEvent ? e.touches[0].clientY : e.clientY;
+    const clientX = isTouchEvent ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+    const clientY = isTouchEvent ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
 
     let interactionData: any = {};
 
@@ -261,10 +295,7 @@ export const BubbleItem = forwardRef<BubbleItemHandle, BubbleItemProps>(({ bubbl
   const handleTextClick = useCallback((e: React.MouseEvent) => {
     if (isSaving || !isSelected) return;
     e.stopPropagation();
-
-    if (!isEditingText) {
-      enterEditMode();
-    }
+    if (!isEditingText) enterEditMode();
   }, [isSaving, isSelected, isEditingText, enterEditMode]);
 
   const handleBubbleBodyDoubleClick = useCallback((e: React.MouseEvent) => {
@@ -279,8 +310,8 @@ export const BubbleItem = forwardRef<BubbleItemHandle, BubbleItemProps>(({ bubbl
 
     const handleMouseMove = (e: MouseEvent | TouchEvent) => {
       const isTouchEvent = 'touches' in e;
-      const clientX = isTouchEvent ? e.touches[0].clientX : e.clientX;
-      const clientY = isTouchEvent ? e.touches[0].clientY : e.clientY;
+      const clientX = isTouchEvent ? e.touches[0].clientX : (e as MouseEvent).clientX;
+      const clientY = isTouchEvent ? e.touches[0].clientY : (e as MouseEvent).clientY;
 
       const deltaX = clientX - interaction.startX;
       const deltaY = clientY - interaction.startY;
@@ -512,7 +543,7 @@ export const BubbleItem = forwardRef<BubbleItemHandle, BubbleItemProps>(({ bubbl
     outline: 'none',
     cursor: isEditingText ? 'text' : 'move',
     width: '100%',
-    lineHeight: `calc(1em + ${getLineHeightOffset(bubble.fontSize)}px)`,
+    lineHeight: `calc(1em + ${bubble.lineHeightOffset}px)`, // ← interligne
     wordWrap: 'break-word',
     overflowWrap: 'break-word',
   };
@@ -621,9 +652,22 @@ export const BubbleItem = forwardRef<BubbleItemHandle, BubbleItemProps>(({ bubbl
             fill="white"
             stroke={bubble.borderColor}
             strokeWidth={strokeWidth}
-            style={{ cursor: (isSelected && !isEditingText) ? 'move' : 'default', pointerEvents: (isSelected && !isEditingText) ? 'auto' : 'none' }}
-            onMouseDown={(e) => { if (isSelected && !isEditingText) { e.stopPropagation(); handleBubbleMouseDown(e as any, 'move-part', undefined, dot.id); } }}
-            onTouchStart={(e) => { if (isSelected && !isEditingText) { e.stopPropagation(); handleBubbleMouseDown(e as any, 'move-part', undefined, dot.id); } }}
+            style={{
+              cursor: (isSelected && !isEditingText) ? 'move' : 'default',
+              pointerEvents: (isSelected && !isEditingText) ? 'auto' : 'none'
+            }}
+            onMouseDown={(e) => {
+              if (isSelected && !isEditingText) {
+                e.stopPropagation();
+                handleBubbleMouseDown(e as any, 'move-part', undefined, dot.id);
+              }
+            }}
+            onTouchStart={(e) => {
+              if (isSelected && !isEditingText) {
+                e.stopPropagation();
+                handleBubbleMouseDown(e as any, 'move-part', undefined, dot.id);
+              }
+            }}
           />
         );
       }
