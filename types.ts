@@ -1,8 +1,6 @@
 export enum BubbleType {
   SpeechDown = 'speech-down',
   SpeechUp = 'speech-up',
-  SpeechDownMinimal = 'speech-down-minimal',
-  SpeechUpMinimal = 'speech-up-minimal',
   Thought = 'thought',
   Shout = 'shout',
   Descriptive = 'descriptive',
@@ -52,7 +50,6 @@ export interface Bubble {
   fontSize: number;
   textColor: string;
   borderColor: string;
-  borderWidth: number;
   zIndex: number;
   parts: BubblePart[];
   shapeVariant?: number;
@@ -64,21 +61,20 @@ export interface ToolSettings {
   activeFontSize: number;
   activeTextColor: string;
   activeBorderColor: string;
-  activeBorderWidth: number;
   defaultTailLength: number;
   defaultTailBaseWidth: number;
   defaultDotCount: number;
   defaultDotSize: number;
+
 }
 
-export const MIN_BUBBLE_WIDTH = 50;
-export const MIN_BUBBLE_HEIGHT = 30;
+export const MIN_BUBBLE_WIDTH = 30;
+export const MIN_BUBBLE_HEIGHT = 15;
+
 export const MIN_TAIL_LENGTH = 10;
 export const MIN_TAIL_BASE_WIDTH = 10;
 export const MIN_DOT_SIZE = 5;
 export const MIN_DOT_COUNT = 1;
-export const MIN_BORDER_WIDTH = 0.5;
-export const MAX_BORDER_WIDTH = 5;
 
 export const FONT_FAMILY_MAP: Record<FontName, string> = {
   [FontName.Comic]: "'Comic Neue', cursive",
@@ -91,8 +87,6 @@ export const FONT_FAMILY_MAP: Record<FontName, string> = {
 export const BUBBLE_REQUIRES_PARTS: BubbleType[] = [
   BubbleType.SpeechDown,
   BubbleType.SpeechUp,
-  BubbleType.SpeechDownMinimal,
-  BubbleType.SpeechUpMinimal,
   BubbleType.Thought,
   BubbleType.Whisper
 ];
