@@ -469,7 +469,7 @@ const App: React.FC = () => {
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        <aside className="w-420px flex-shrink-0 overflow-y-auto p-4 bg-gray-50 border-r border-gray-300">
+        <aside className="w-1/3 flex-shrink-0 overflow-y-auto p-4 bg-gray-50 border-r border-gray-300">
           <Toolbar
             settings={toolSettings}
             onImageUpload={handleImageUpload}
@@ -500,7 +500,7 @@ const App: React.FC = () => {
           </div>
         </aside>
 
-        <main className="flex-1 flex justify-center items-start p-6 overflow-auto bg-gray-300">
+        <main className="w-2/3 flex justify-center items-start p-6 overflow-auto bg-gray-300">
           <CanvasArea
             ref={canvasAreaRef}
             image={uploadedImage}
@@ -521,4 +521,5 @@ const App: React.FC = () => {
 };
 
 export default App;
+
 
