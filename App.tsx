@@ -4,7 +4,7 @@ import { CanvasArea } from './components/CanvasArea.tsx';
 import { Bubble, BubblePart, BubbleType, FontName, ToolSettings, MIN_BUBBLE_WIDTH, MIN_BUBBLE_HEIGHT, MIN_TAIL_LENGTH, MIN_TAIL_BASE_WIDTH, MIN_DOT_COUNT, MIN_DOT_SIZE, BUBBLE_REQUIRES_PARTS, SpeechTailPart, ThoughtDotPart } from './types.ts';
 import { BubbleItemHandle } from './components/BubbleItem.tsx';
 import { generateBubblePaths } from './utils/bubbleUtils';
-import { SAFE_TEXT_ZONES, getTextBounds } from './utils/textAutoFit';
+import { getTextBounds } from './utils/textAutoFit';
 
 const App: React.FC = () => {
   const [uploadedImage, setUploadedImage] = useState<{ url: string; width: number; height: number } | null>(null);
@@ -16,11 +16,11 @@ const App: React.FC = () => {
     activeFontSize: 12,
     activeTextColor: '#000000',
     activeBorderColor: '#000000',
+    activeBorderWidth: 2,             // ← épaisseur par défaut
     defaultTailLength: 30,
     defaultTailBaseWidth: 20,
     defaultDotCount: 4,
     defaultDotSize: 15,
-
   });
   const [isSaving, setIsSaving] = useState(false);
   const [canvasSize, setCanvasSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
@@ -34,17 +34,11 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (uploadedImage) {
-      // Smart scaling to fit screen
-      const maxWidth = window.innerWidth * 0.9; // 90% of screen width
-      const maxHeight = window.innerHeight * 0.8; // 80% of screen height (account for headers)
-
+      const maxWidth = window.innerWidth * 0.9;
+      const maxHeight = window.innerHeight * 0.8;
       const scaleX = maxWidth / uploadedImage.width;
       const scaleY = maxHeight / uploadedImage.height;
-
-      // Use the smaller scale to ensure it fits both dimensions, but limit to 1.0 (don't upscale) or allow zoom? 
-      // Usually reducing huge images is the goal.
-      // Let's cap max scale at 1.0 to avoid blurry upscaling of small images, but usually comic pages are huge.
-      const scale = Math.min(scaleX, scaleY, 1.0); // Remove 1.0 cap if you want to zoom up small images
+      const scale = Math.min(scaleX, scaleY, 1.0);
 
       setCanvasSize({
         width: Math.floor(uploadedImage.width * scale),
@@ -65,6 +59,7 @@ const App: React.FC = () => {
           activeFontSize: selectedBubble.fontSize,
           activeTextColor: selectedBubble.textColor,
           activeBorderColor: selectedBubble.borderColor,
+          activeBorderWidth: selectedBubble.borderWidth,   // ← synchro avec bulle sélectionnée
         }));
       }
     }
@@ -90,7 +85,7 @@ const App: React.FC = () => {
 
     const newBubbleId = `bubble-${Date.now()}`;
     const initialWidth = 150;
-    const initialHeight = initialWidth * 0.3; // Plus compact au départ (env. 45px)
+    const initialHeight = initialWidth * 0.3;
 
     const bubbleX = Math.max(0, Math.min(x - initialWidth / 2, canvasSize.width - initialWidth));
     const bubbleY = Math.max(0, Math.min(y - initialHeight / 2, canvasSize.height - initialHeight));
@@ -154,12 +149,13 @@ const App: React.FC = () => {
       fontSize: toolSettings.activeFontSize,
       textColor: toolSettings.activeTextColor,
       borderColor: toolSettings.activeBorderColor,
+      borderWidth: toolSettings.activeBorderWidth,  // ← épaisseur appliquée
       zIndex: nextZIndex.current++,
       parts: newParts,
     };
     setBubbles(prev => [...prev, newBubble]);
     setSelectedBubbleId(newBubbleId);
-  }, [uploadedImage, toolSettings, canvasSize, nextZIndex]);
+  }, [uploadedImage, toolSettings, canvasSize]);
 
   const handleSelectBubble = useCallback((id: string | null) => {
     if (id) {
@@ -181,6 +177,7 @@ const App: React.FC = () => {
         activeFontSize: updatedBubble.fontSize,
         activeTextColor: updatedBubble.textColor,
         activeBorderColor: updatedBubble.borderColor,
+        activeBorderWidth: updatedBubble.borderWidth,
       }));
     }
   }, [selectedBubbleId]);
@@ -211,6 +208,9 @@ const App: React.FC = () => {
         if (newSettings.activeFontSize) updates.fontSize = newSettings.activeFontSize;
         if (newSettings.activeTextColor) updates.textColor = newSettings.activeTextColor;
         if (newSettings.activeBorderColor) updates.borderColor = newSettings.activeBorderColor;
+        if (typeof newSettings.activeBorderWidth === 'number') {
+          updates.borderWidth = newSettings.activeBorderWidth;
+        }
 
         if (Object.keys(updates).length > 0) {
           setBubbles(prev => prev.map(b => b.id === selectedBubbleId ? { ...b, ...updates } : b));
@@ -228,87 +228,12 @@ const App: React.FC = () => {
 
   const canvasAreaRef = useRef<HTMLDivElement>(null);
 
-  const handleSaveImage = useCallback(async (format: 'png' | 'jpeg') => {
-    if (!canvasAreaRef.current || !uploadedImage) {
-      alert("Veuillez télécharger une image de BD d'abord !");
-      return;
-    }
-
-    const previousSelectedId = selectedBubbleId;
-    setSelectedBubbleId(null);
-    setIsSaving(true);
-
-    await new Promise(resolve => setTimeout(resolve, 300));
-
-    try {
-      await document.fonts.ready;
-
-      const canvasElement = canvasAreaRef.current.querySelector('#actual-canvas-content') as HTMLElement;
-      if (!canvasElement) {
-        alert("Erreur: Impossible de trouver le contenu du canvas.");
-        setIsSaving(false);
-        setSelectedBubbleId(previousSelectedId);
-        return;
-      }
-
-      // Créer un canvas temporaire
-      const tempCanvas = document.createElement('canvas');
-      const ctx = tempCanvas.getContext('2d');
-      if (!ctx) throw new Error("Impossible de créer le contexte canvas");
-
-      // Utiliser la résolution d'origine de l'image pour l'export
-      const exportScale = uploadedImage.width / canvasSize.width;
-      tempCanvas.width = uploadedImage.width;
-      tempCanvas.height = uploadedImage.height;
-      ctx.scale(exportScale, exportScale);
-
-      // Dessiner l'image de fond
-      const img = new Image();
-      img.src = uploadedImage.url;
-      await new Promise((resolve, reject) => {
-        img.onload = resolve;
-        img.onerror = reject;
-      });
-      ctx.drawImage(img, 0, 0, canvasSize.width, canvasSize.height);
-
-      // Dessiner chaque bulle manuellement
-      for (const bubble of bubblesRef.current.sort((a, b) => a.zIndex - b.zIndex)) {
-        // Récupérer le texte actuel
-        const bubbleElement = document.querySelector(`[data-bubble-id="${bubble.id}"]`);
-        const textElement = bubbleElement?.querySelector('.bubble-text') as HTMLDivElement | null;
-        const currentText = textElement ? textElement.innerHTML : bubble.text;
-
-        // Dessiner la bulle et son contenu
-        await drawBubbleToCanvas(ctx, bubble, currentText);
-      }
-
-      const mimeType = format === 'jpeg' ? 'image/jpeg' : 'image/png';
-      const quality = format === 'jpeg' ? 0.92 : undefined;
-      const imgData = tempCanvas.toDataURL(mimeType, quality);
-
-      const link = document.createElement('a');
-      link.download = `planche_bd_modifiee.${format}`;
-      link.href = imgData;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } catch (error) {
-      console.error("Error saving image:", error);
-      alert("Erreur lors de l'enregistrement de l'image. Vérifiez la console.");
-    } finally {
-      setIsSaving(false);
-      setSelectedBubbleId(previousSelectedId);
-    }
-  }, [uploadedImage, selectedBubbleId, canvasSize]);
-
-  // Fonction pour dessiner une bulle sur canvas
-  const drawBubbleToCanvas = async (ctx: CanvasRenderingContext2D, bubble: Bubble, text: string) => {
-    const { x, y, width, height, type, borderColor, textColor, fontSize, parts } = bubble;
+  const drawBubbleToCanvas = useCallback(async (ctx: CanvasRenderingContext2D, bubble: Bubble, text: string) => {
+    const { x, y, width, height, type, borderColor, textColor, fontSize, parts, borderWidth } = bubble;
 
     ctx.save();
     ctx.translate(x, y);
 
-    // Dessiner le corps de la bulle
     if (type !== BubbleType.TextOnly) {
       const { bodyPath, partsCircles } = generateBubblePaths(bubble);
 
@@ -316,26 +241,24 @@ const App: React.FC = () => {
       ctx.fillStyle = 'white';
       ctx.fill(path);
       ctx.strokeStyle = borderColor;
-      ctx.lineWidth = 2;
+      ctx.lineWidth = borderWidth ?? 2;
       if (type === BubbleType.Whisper) {
         ctx.setLineDash([5, 5]);
       }
       ctx.stroke(path);
       ctx.setLineDash([]);
 
-      // Dessiner les parties supplémentaires (comme les points de pensée)
       partsCircles.forEach(part => {
         ctx.beginPath();
         ctx.arc(part.cx, part.cy, part.r, 0, 2 * Math.PI);
         ctx.fillStyle = 'white';
         ctx.fill();
         ctx.strokeStyle = borderColor;
-        ctx.lineWidth = 2;
+        ctx.lineWidth = borderWidth ?? 2;
         ctx.stroke();
       });
     }
 
-    // Dessiner le texte en utilisant le rendu riche
     const fontMap: Record<string, string> = {
       'font-comic': "'Comic Neue', cursive",
       'font-bangers': "'Bangers', cursive",
@@ -344,9 +267,7 @@ const App: React.FC = () => {
       'font-arial': "Arial, sans-serif",
     };
 
-
     try {
-      // Utiliser le nouveau système de calcul des limites de texte
       const textBounds = getTextBounds({ ...bubble, type, width, height });
       const textWidth = textBounds.width;
       const textHeight = textBounds.height;
@@ -376,7 +297,74 @@ const App: React.FC = () => {
     }
 
     ctx.restore();
-  };
+  }, []);
+
+  const handleSaveImage = useCallback(async (format: 'png' | 'jpeg') => {
+    if (!canvasAreaRef.current || !uploadedImage) {
+      alert("Veuillez télécharger une image de BD d'abord !");
+      return;
+    }
+
+    const previousSelectedId = selectedBubbleId;
+    setSelectedBubbleId(null);
+    setIsSaving(true);
+
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    try {
+      await document.fonts.ready;
+
+      const canvasElement = canvasAreaRef.current.querySelector('#actual-canvas-content') as HTMLElement;
+      if (!canvasElement) {
+        alert("Erreur: Impossible de trouver le contenu du canvas.");
+        setIsSaving(false);
+        setSelectedBubbleId(previousSelectedId);
+        return;
+      }
+
+      const tempCanvas = document.createElement('canvas');
+      const ctx = tempCanvas.getContext('2d');
+      if (!ctx) throw new Error("Impossible de créer le contexte canvas");
+
+      const exportScale = uploadedImage.width / canvasSize.width;
+      tempCanvas.width = uploadedImage.width;
+      tempCanvas.height = uploadedImage.height;
+      ctx.scale(exportScale, exportScale);
+
+      const img = new Image();
+      img.src = uploadedImage.url;
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+      });
+      ctx.drawImage(img, 0, 0, canvasSize.width, canvasSize.height);
+
+      for (const bubble of bubblesRef.current.sort((a, b) => a.zIndex - b.zIndex)) {
+        const bubbleElement = document.querySelector(`[data-bubble-id="${bubble.id}"]`);
+        const textElement = bubbleElement?.querySelector('.bubble-text') as HTMLDivElement | null;
+        const currentText = textElement ? textElement.innerHTML : bubble.text;
+
+        await drawBubbleToCanvas(ctx, bubble, currentText);
+      }
+
+      const mimeType = format === 'jpeg' ? 'image/jpeg' : 'image/png';
+      const quality = format === 'jpeg' ? 0.92 : undefined;
+      const imgData = tempCanvas.toDataURL(mimeType, quality);
+
+      const link = document.createElement('a');
+      link.download = `planche_bd_modifiee.${format}`;
+      link.href = imgData;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error("Error saving image:", error);
+      alert("Erreur lors de l'enregistrement de l'image. Vérifiez la console.");
+    } finally {
+      setIsSaving(false);
+      setSelectedBubbleId(previousSelectedId);
+    }
+  }, [uploadedImage, selectedBubbleId, canvasSize, drawBubbleToCanvas]);
 
   const handleSaveProject = useCallback(() => {
     if (!uploadedImage) {
@@ -387,9 +375,7 @@ const App: React.FC = () => {
     const bubblesWithLatestText = bubblesRef.current.map(bubble => {
       const bubbleElement = document.querySelector(`[data-bubble-id="${bubble.id}"]`);
       const textElement = bubbleElement?.querySelector('.bubble-text') as HTMLDivElement | null;
-
       const currentText = textElement ? textElement.innerHTML : bubble.text;
-
       return { ...bubble, text: currentText };
     });
 
@@ -399,7 +385,7 @@ const App: React.FC = () => {
       toolSettings: toolSettings,
       nextZIndex: nextZIndex.current,
       canvasSize: canvasSize,
-      version: "1.1"
+      version: "1.2"   // version bump
     };
 
     const jsonString = JSON.stringify(projectState, null, 2);
@@ -427,7 +413,7 @@ const App: React.FC = () => {
           throw new Error("Fichier de projet invalide ou corrompu.");
         }
 
-        const defaultBubbleProps = { textColor: '#000000', borderColor: '#000000' };
+        const defaultBubbleProps = { textColor: '#000000', borderColor: '#000000', borderWidth: 2 };
 
         setUploadedImage(projectState.image);
         setBubbles(projectState.bubbles.map((b: Bubble) => ({ ...defaultBubbleProps, ...b })));
@@ -437,7 +423,6 @@ const App: React.FC = () => {
         setSelectedBubbleId(null);
 
         alert("Projet chargé avec succès !");
-
       } catch (error) {
         console.error("Erreur lors du chargement du projet:", error);
         alert(`Erreur lors du chargement du projet: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
@@ -510,5 +495,3 @@ const App: React.FC = () => {
 };
 
 export default App;
-
-
