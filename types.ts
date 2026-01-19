@@ -50,6 +50,7 @@ export interface Bubble {
   fontSize: number;
   textColor: string;
   borderColor: string;
+  borderWidth: number;          // ← ajouté
   zIndex: number;
   parts: BubblePart[];
   shapeVariant?: number;
@@ -61,11 +62,11 @@ export interface ToolSettings {
   activeFontSize: number;
   activeTextColor: string;
   activeBorderColor: string;
+  activeBorderWidth: number;    // ← ajouté (pour nouvelles bulles)
   defaultTailLength: number;
   defaultTailBaseWidth: number;
   defaultDotCount: number;
   defaultDotSize: number;
-
 }
 
 export const MIN_BUBBLE_WIDTH = 30;
@@ -88,5 +89,5 @@ export const BUBBLE_REQUIRES_PARTS: BubbleType[] = [
   BubbleType.SpeechDown,
   BubbleType.SpeechUp,
   BubbleType.Thought,
-  BubbleType.Whisper
+  BubbleType.Whisper,
 ];
