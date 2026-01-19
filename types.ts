@@ -50,7 +50,7 @@ export interface Bubble {
   fontSize: number;
   textColor: string;
   borderColor: string;
-  borderWidth: number;          // ← ajouté
+  borderWidth: number;      // ← épaisseur par bulle
   zIndex: number;
   parts: BubblePart[];
   shapeVariant?: number;
@@ -62,7 +62,7 @@ export interface ToolSettings {
   activeFontSize: number;
   activeTextColor: string;
   activeBorderColor: string;
-  activeBorderWidth: number;    // ← ajouté (pour nouvelles bulles)
+  activeBorderWidth: number;  // ← valeur par défaut pour nouvelles bulles
   defaultTailLength: number;
   defaultTailBaseWidth: number;
   defaultDotCount: number;
