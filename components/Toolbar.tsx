@@ -312,7 +312,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           <div className="flex items-center gap-3">
             <input
               type="range"
-              min={2}
+              min={0.1}
               max={40}
               step={1}
               value={effectiveLineHeightOffset}
@@ -325,7 +325,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             />
             <input
               type="number"
-              min={2}
+              min={0.1}
               max={40}
               step={1}
               value={effectiveLineHeightOffset}
