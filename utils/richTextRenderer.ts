@@ -139,7 +139,8 @@ export async function drawRichText(
     height: number,
     defaultStyle: TextStyle,
     fontMap: Record<string, string>,
-    getMaxWidthAtY?: (y: number) => number
+    getMaxWidthAtY?: (y: number) => number,
+  lineHeightOffset: number
 ) {
     // 1. Parsing
     let segments = parseRichText(html, defaultStyle);
@@ -233,7 +234,7 @@ export async function drawRichText(
 
                         if (currentLine.width + testWidth > maxLineWidth && currentLine.segments.length > 0) {
                             // Start new line
-                            currentY += currentLine.height || (defaultStyle.fontSize + getLineHeightOffset(defaultStyle.fontSize));
+                            currentY += currentLine.height || (defaultStyle.fontSize + lineHeightoffset;
                             lines.push(currentLine);
                             currentLine = { segments: [], width: 0, height: 0 };
                         }
@@ -256,7 +257,7 @@ export async function drawRichText(
                         });
                         currentLine.width += chunkWidth;
                         // Use custom gap based on font size
-                        currentLine.height = Math.max(currentLine.height, seg.style.fontSize + getLineHeightOffset(seg.style.fontSize));
+                        currentLine.height = Math.max(currentLine.height, seg.style.fontSize + lineHeightOffsetseg.style.fontSize));
 
                         remainingWord = remainingWord.substring(chunk.length);
                     } else {
@@ -266,7 +267,7 @@ export async function drawRichText(
             } else {
                 // Normal word wrapping
                 if (currentLine.width + wordWidth > maxLineWidth && currentLine.width > 0) {
-                    currentY += currentLine.height || (defaultStyle.fontSize + getLineHeightOffset(defaultStyle.fontSize));
+                    currentY += currentLine.height || (defaultStyle.fontSize + lineHeightoffset;
                     lines.push(currentLine);
                     currentLine = { segments: [], width: 0, height: 0 };
                 }
@@ -280,7 +281,7 @@ export async function drawRichText(
                 });
                 currentLine.width += wordWidth;
                 // Use custom gap based on font size
-                currentLine.height = Math.max(currentLine.height, seg.style.fontSize + getLineHeightOffset(seg.style.fontSize));
+                currentLine.height = Math.max(currentLine.height, seg.style.fontSize + lineHeightOffsetseg.style.fontSize));
             }
         });
     });
