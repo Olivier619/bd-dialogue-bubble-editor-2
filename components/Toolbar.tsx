@@ -314,7 +314,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
               type="range"
               min={0.1}
               max={40}
-              step={1}
+              step={0.1}
               value={effectiveLineHeightOffset}
               onChange={(e) => {
                 const v = parseInt(e.target.value) || 2;
@@ -327,7 +327,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
               type="number"
               min={0.1}
               max={40}
-              step={1}
+              step={0.1}
               value={effectiveLineHeightOffset}
               onChange={(e) => {
                 const v = parseInt(e.target.value) || 2;
