@@ -317,7 +317,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
               step={0.1}
               value={effectiveLineHeightOffset}
               onChange={(e) => {
-                const v = parseInt(e.target.value) || 2;
+                const v = parseFloat(e.target.value) || 0.1;
                 onSettingChange({ activeLineHeightOffset: v });
               }}
               className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
@@ -330,7 +330,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
               step={0.1}
               value={effectiveLineHeightOffset}
               onChange={(e) => {
-                const v = parseInt(e.target.value) || 2;
+                const v = parseFloat(e.target.value) || 0.1;
                 onSettingChange({ activeLineHeightOffset: v });
               }}
               className="w-20 p-1 border border-gray-300 rounded text-sm"
