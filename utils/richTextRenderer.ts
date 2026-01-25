@@ -140,7 +140,7 @@ export async function drawRichText(
     defaultStyle: TextStyle,
     fontMap: Record<string, string>,
     getMaxWidthAtY?: (y: number) => number,
-  lineHeightOffset: number
+  lineHeightOffset: number = 0
 ) {
     // 1. Parsing
     let segments = parseRichText(html, defaultStyle);
