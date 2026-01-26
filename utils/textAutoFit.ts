@@ -67,7 +67,8 @@ export function measureText(
   text: string,
   fontFamily: string,
   fontSize: number,
-  maxWidth: number
+  maxWidth: number,
+  lineHeightOffset?: number
 ): { width: number; height: number; lines: number } {
   // Créer un canvas temporaire pour mesurer
   const canvas = document.createElement('canvas');
@@ -102,7 +103,8 @@ export function measureText(
     lines.push(currentLine);
   }
 
-  const lineHeight = fontSize + getLineHeightOffset(fontSize);
+  const effectiveOffset = lineHeightOffset !== undefined ? lineHeightOffset : getLineHeightOffset(fontSize);
+  const lineHeight = fontSize + effectiveOffset;
   const totalHeight = lines.length * lineHeight;
   const maxLineWidth = Math.max(...lines.map(line => ctx.measureText(line).width));
 
@@ -133,7 +135,7 @@ export function calculateOptimalFontSize(
   const maxIterations = 20;
 
   while (fontSize >= minFontSize && iterations < maxIterations) {
-    const dimensions = measureText(text, fontFamily, fontSize, textBounds.width);
+    const dimensions = measureText(text, fontFamily, fontSize, textBounds.width, bubble.lineHeightOffset);
 
     // Vérifier si le texte rentre dans les limites
     if (dimensions.height <= textBounds.height && dimensions.width <= textBounds.width) {
@@ -152,7 +154,7 @@ export function calculateOptimalFontSize(
   }
 
   // Si on n'a pas trouvé de taille qui convient, retourner la taille minimale
-  const dimensions = measureText(text, fontFamily, minFontSize, textBounds.width);
+  const dimensions = measureText(text, fontFamily, minFontSize, textBounds.width, bubble.lineHeightOffset);
 
   return {
     fontSize: minFontSize,
@@ -168,7 +170,7 @@ export function calculateOptimalFontSize(
  */
 export function detectTextOverflow(text: string, bubble: Bubble, fontFamily: string): boolean {
   const textBounds = getTextBounds(bubble);
-  const dimensions = measureText(text, fontFamily, bubble.fontSize, textBounds.width);
+  const dimensions = measureText(text, fontFamily, bubble.fontSize, textBounds.width, bubble.lineHeightOffset);
 
   return dimensions.height > textBounds.height || dimensions.width > textBounds.width;
 }

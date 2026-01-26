@@ -311,9 +311,10 @@ const App: React.FC = () => {
           isItalic: false,
           isUnderline: false,
           isStrikethrough: false,
-          lineHeightOffset: bubble.lineHeightOffset, // à utiliser dans ton renderer si besoin
-        } as any,
-        fontMap
+        },
+        fontMap,
+        undefined,
+        bubble.lineHeightOffset
       );
     } catch (e) {
       console.error("Failed to load or use richTextRenderer", e);

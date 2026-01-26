@@ -234,7 +234,7 @@ export async function drawRichText(
 
                         if (currentLine.width + testWidth > maxLineWidth && currentLine.segments.length > 0) {
                             // Start new line
-                            currentY += currentLine.height || (defaultStyle.fontSize + lineHeightoffset;
+                            currentY += currentLine.height || (defaultStyle.fontSize + lineHeightOffset);
                             lines.push(currentLine);
                             currentLine = { segments: [], width: 0, height: 0 };
                         }
@@ -257,7 +257,7 @@ export async function drawRichText(
                         });
                         currentLine.width += chunkWidth;
                         // Use custom gap based on font size
-                        currentLine.height = Math.max(currentLine.height, seg.style.fontSize + lineHeightOffsetseg.style.fontSize));
+                        currentLine.height = Math.max(currentLine.height, seg.style.fontSize + lineHeightOffset);
 
                         remainingWord = remainingWord.substring(chunk.length);
                     } else {
@@ -267,7 +267,7 @@ export async function drawRichText(
             } else {
                 // Normal word wrapping
                 if (currentLine.width + wordWidth > maxLineWidth && currentLine.width > 0) {
-                    currentY += currentLine.height || (defaultStyle.fontSize + lineHeightoffset;
+                    currentY += currentLine.height || (defaultStyle.fontSize + lineHeightOffset);
                     lines.push(currentLine);
                     currentLine = { segments: [], width: 0, height: 0 };
                 }
@@ -281,7 +281,7 @@ export async function drawRichText(
                 });
                 currentLine.width += wordWidth;
                 // Use custom gap based on font size
-                currentLine.height = Math.max(currentLine.height, seg.style.fontSize + lineHeightOffsetseg.style.fontSize));
+                currentLine.height = Math.max(currentLine.height, seg.style.fontSize + lineHeightOffset);
             }
         });
     });
