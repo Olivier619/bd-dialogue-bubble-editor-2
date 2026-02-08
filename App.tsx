@@ -50,17 +50,16 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (uploadedImage) {
-      // On veut que le canvas soit large (2/3 de l'écran comme demandé)
+      // On veut que l'image soit large (2/3 de l'écran comme demandé)
       const targetWidth = Math.floor(window.innerWidth * 0.66);
-      const maxHeight = window.innerHeight * 0.85;
 
-      // On calcule l'échelle pour que l'image ne dépasse pas en hauteur
-      const scaleY = maxHeight / uploadedImage.height;
-      const scale = Math.min(scaleY, 1.0);
+      // On calcule la hauteur proportionnelle pour ne pas déformer l'image
+      const aspectRatio = uploadedImage.height / uploadedImage.width;
+      const targetHeight = Math.floor(targetWidth * aspectRatio);
 
       setCanvasSize({
         width: targetWidth,
-        height: Math.floor(uploadedImage.height * scale)
+        height: targetHeight
       });
     } else {
       setCanvasSize({ width: 800, height: 600 });
