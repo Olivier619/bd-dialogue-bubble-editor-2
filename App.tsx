@@ -352,13 +352,24 @@ const App: React.FC = () => {
       const ctx = tempCanvas.getContext('2d');
       if (!ctx) throw new Error("Impossible de créer le contexte canvas");
 
-      const imageScaleOnCanvas = Math.min(canvasSize.width / uploadedImage.width, canvasSize.height / uploadedImage.height, 1.0);
-      const displayedImageWidth = uploadedImage.width * imageScaleOnCanvas;
-      const exportScale = uploadedImage.width / displayedImageWidth;
+      const exportScale = uploadedImage.width / canvasSize.width;
 
-      tempCanvas.width = canvasSize.width * exportScale;
-      tempCanvas.height = canvasSize.height * exportScale;
-      ctx.scale(exportScale, exportScale);
+      // On veut exporter le canvas entier avec l'image qui le remplit
+      tempCanvas.width = canvasSize.width * (uploadedImage.width / canvasSize.width);
+      // En fait, on garde la largeur de l'image originale comme base d'échelle ? 
+      // Non, si on veut augmenter la largeur de l'image téléchargée, on doit augmenter tempCanvas.width.
+
+      // Si l'image originale est 1000px et on veut qu'elle soit plus large (par ex 2000px sur l'export),
+      // on doit décider de la résolution d'export.
+      // Utilisons le ratio canvasSize.width / uploadedImage.width pour voir si on upscale.
+
+      const upscaleFactor = canvasSize.width / (uploadedImage.width * 0.5); // Juste un exemple
+      // Plus simple: on exporte à la résolution du canvas mais scale-up pour la qualité
+      const qualityScale = 2; // Export à 2x la taille affichée pour la netteté
+
+      tempCanvas.width = canvasSize.width * qualityScale;
+      tempCanvas.height = canvasSize.height * qualityScale;
+      ctx.scale(qualityScale, qualityScale);
 
       const img = new Image();
       img.src = uploadedImage.url;
@@ -367,10 +378,8 @@ const App: React.FC = () => {
         img.onerror = reject;
       });
 
-      // Centrer l'image sur le canvas d'export
-      const offsetX = (canvasSize.width - displayedImageWidth) / 2;
-      const offsetY = (canvasSize.height - (uploadedImage.height * imageScaleOnCanvas)) / 2;
-      ctx.drawImage(img, offsetX, offsetY, displayedImageWidth, uploadedImage.height * imageScaleOnCanvas);
+      // L'image remplit tout le canvas (déjà proportionnel via useEffect)
+      ctx.drawImage(img, 0, 0, canvasSize.width, canvasSize.height);
 
       for (const bubble of bubblesRef.current.sort((a, b) => a.zIndex - b.zIndex)) {
         const bubbleElement = document.querySelector(`[data-bubble-id="${bubble.id}"]`);
