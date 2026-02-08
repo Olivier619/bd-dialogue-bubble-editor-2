@@ -50,14 +50,16 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (uploadedImage) {
-      const maxWidth = window.innerWidth * 0.9;
-      const maxHeight = window.innerHeight * 0.8;
-      const scaleX = maxWidth / uploadedImage.width;
+      // On veut que le canvas soit large (2/3 de l'écran comme demandé)
+      const targetWidth = Math.floor(window.innerWidth * 0.66);
+      const maxHeight = window.innerHeight * 0.85;
+
+      // On calcule l'échelle pour que l'image ne dépasse pas en hauteur
       const scaleY = maxHeight / uploadedImage.height;
-      const scale = Math.min(scaleX, scaleY, 1.0);
+      const scale = Math.min(scaleY, 1.0);
 
       setCanvasSize({
-        width: Math.floor(uploadedImage.width * scale),
+        width: targetWidth,
         height: Math.floor(uploadedImage.height * scale)
       });
     } else {
@@ -350,9 +352,12 @@ const App: React.FC = () => {
       const ctx = tempCanvas.getContext('2d');
       if (!ctx) throw new Error("Impossible de créer le contexte canvas");
 
-      const exportScale = uploadedImage.width / canvasSize.width;
-      tempCanvas.width = uploadedImage.width;
-      tempCanvas.height = uploadedImage.height;
+      const imageScaleOnCanvas = Math.min(canvasSize.width / uploadedImage.width, canvasSize.height / uploadedImage.height, 1.0);
+      const displayedImageWidth = uploadedImage.width * imageScaleOnCanvas;
+      const exportScale = uploadedImage.width / displayedImageWidth;
+
+      tempCanvas.width = canvasSize.width * exportScale;
+      tempCanvas.height = canvasSize.height * exportScale;
       ctx.scale(exportScale, exportScale);
 
       const img = new Image();
@@ -361,7 +366,11 @@ const App: React.FC = () => {
         img.onload = resolve;
         img.onerror = reject;
       });
-      ctx.drawImage(img, 0, 0, canvasSize.width, canvasSize.height);
+
+      // Centrer l'image sur le canvas d'export
+      const offsetX = (canvasSize.width - displayedImageWidth) / 2;
+      const offsetY = (canvasSize.height - (uploadedImage.height * imageScaleOnCanvas)) / 2;
+      ctx.drawImage(img, offsetX, offsetY, displayedImageWidth, uploadedImage.height * imageScaleOnCanvas);
 
       for (const bubble of bubblesRef.current.sort((a, b) => a.zIndex - b.zIndex)) {
         const bubbleElement = document.querySelector(`[data-bubble-id="${bubble.id}"]`);
